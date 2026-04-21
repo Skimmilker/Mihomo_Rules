@@ -85,4 +85,3 @@ jobs:
           git add rules/mrs
           git commit -m "chore: update mrs files [skip ci]"
           git push
-``
