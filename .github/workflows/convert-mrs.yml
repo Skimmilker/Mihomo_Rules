@@ -9,6 +9,9 @@ on:
       - 'rules/domain/**/*.yaml'
       - '.github/workflows/convert-mrs.yml'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: write
 
@@ -19,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download latest Mihomo
         shell: bash
