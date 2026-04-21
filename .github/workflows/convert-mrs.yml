@@ -1,0 +1,88 @@
+name: Convert YAML to MRS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'rules/domain/**/*.yaml'
+      - '.github/workflows/convert-mrs.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  convert:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download latest Mihomo
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          API="https://api.github.com/repos/MetaCubeX/mihomo/releases/latest"
+          ASSET_URL="$(curl -fsSL "$API" \
+            | grep browser_download_url \
+            | grep 'linux-amd64' \
+            | grep -v '\.deb' \
+            | grep -v 'sha256' \
+            | grep '\.gz"' \
+            | head -n 1 \
+            | cut -d '"' -f 4)"
+
+          test -n "$ASSET_URL"
+
+          FILE_NAME="$(basename "$ASSET_URL")"
+          BIN_NAME="${FILE_NAME%.gz}"
+
+          curl -L "$ASSET_URL" -o "$FILE_NAME"
+          gunzip -f "$FILE_NAME"
+          chmod +x "$BIN_NAME"
+          sudo mv "$BIN_NAME" /usr/local/bin/mihomo
+
+          mihomo -v
+
+      - name: Convert domain YAML to MRS
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob globstar
+
+          mkdir -p rules/mrs
+
+          found=0
+          for f in rules/domain/**/*.yaml; do
+            found=1
+            base="$(basename "${f%.yaml}")"
+            out="rules/mrs/${base}.mrs"
+            mihomo convert-ruleset domain yaml "$f" "$out"
+            echo "Converted: $f -> $out"
+          done
+
+          if [ "$found" -eq 0 ]; then
+            echo "No YAML files found under rules/domain/"
+          fi
+
+      - name: Commit generated MRS files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- rules/mrs; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add rules/mrs
+          git commit -m "chore: update mrs files [skip ci]"
+          git push
+``
