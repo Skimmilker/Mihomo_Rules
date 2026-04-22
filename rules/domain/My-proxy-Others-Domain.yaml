@@ -5,3 +5,4 @@ payload:
     - +.challenges.cloudflare.com
     - +.global-cdn.me
     - +.anygate.vip
+    - +.pipecdn.vip
